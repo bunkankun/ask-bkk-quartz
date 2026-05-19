@@ -8,8 +8,10 @@ export const sharedPageComponents: SharedLayout = {
   afterBody: [],
   footer: Component.Footer({
     links: {
-      GitHub: "https://github.com/jackyzha0/quartz",
-      "Discord Community": "https://discord.gg/cRFFHYye7t",
+      HXWD : "https://hxwd.org",
+      Kanripo : "https://www.kanripo.org",
+      GitHub: "https://github.com/bunkankun/ask-bkk",
+      "Issues": "https://github.com/bunkankun/ask-bkk/issues"
     },
   }),
 }
@@ -38,7 +40,48 @@ export const defaultContentPageLayout: PageLayout = {
         { Component: Component.ReaderMode() },
       ],
     }),
-    Component.Explorer(),
+
+  Component.Explorer({
+  useSavedState: false,
+
+  mapFn: (node) => {
+    if (node.data && node.data.title) {
+      node.displayName = node.data.title
+    }
+  },
+
+  sortFn: (a, b) => {
+    if (a.isFolder && !b.isFolder) return -1
+    if (!a.isFolder && b.isFolder) return 1
+
+    if (a.isFolder && b.isFolder) {
+      return a.displayName.localeCompare(b.displayName, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      })
+    }
+
+    const yearA =
+      a.data && typeof a.data.notBefore === "number"
+        ? a.data.notBefore
+        : Number.POSITIVE_INFINITY
+
+    const yearB =
+      b.data && typeof b.data.notBefore === "number"
+        ? b.data.notBefore
+        : Number.POSITIVE_INFINITY
+
+    if (yearA !== yearB) {
+      return yearA - yearB
+    }
+
+    return a.displayName.localeCompare(b.displayName, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    })
+  },
+})
+
   ],
   right: [
     Component.Graph(),

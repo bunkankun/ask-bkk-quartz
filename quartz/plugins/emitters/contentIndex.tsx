@@ -19,6 +19,9 @@ export type ContentDetails = {
   richContent?: string
   date?: Date
   description?: string
+
+  // custom: expose frontmatter notBefore to Explorer
+  notBefore?: number
 }
 
 interface Options {
@@ -45,9 +48,11 @@ function generateSiteMap(cfg: GlobalConfiguration, idx: ContentIndexMap): string
     <loc>https://${joinSegments(base, encodeURI(slug))}</loc>
     ${content.date && `<lastmod>${content.date.toISOString()}</lastmod>`}
   </url>`
+
   const urls = Array.from(idx)
     .map(([slug, content]) => createURLEntry(simplifySlug(slug), content))
     .join("")
+
   return `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls}</urlset>`
 }
 
@@ -58,7 +63,7 @@ function generateRSSFeed(cfg: GlobalConfiguration, idx: ContentIndexMap, limit?:
     <title>${escapeHTML(content.title)}</title>
     <link>https://${joinSegments(base, encodeURI(slug))}</link>
     <guid>https://${joinSegments(base, encodeURI(slug))}</guid>
-    <description><![CDATA[ ${content.richContent ?? content.description} ]]></description>
+    <description>${content.richContent ?? content.description}</description>
     <pubDate>${content.date?.toUTCString()}</pubDate>
   </item>`
 
@@ -80,32 +85,67 @@ function generateRSSFeed(cfg: GlobalConfiguration, idx: ContentIndexMap, limit?:
 
   return `<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
-    <channel>
-      <title>${escapeHTML(cfg.pageTitle)}</title>
-      <link>https://${base}</link>
-      <description>${!!limit ? i18n(cfg.locale).pages.rss.lastFewNotes({ count: limit }) : i18n(cfg.locale).pages.rss.recentNotes} on ${escapeHTML(
-        cfg.pageTitle,
-      )}</description>
-      <generator>Quartz -- quartz.jzhao.xyz</generator>
-      ${items}
-    </channel>
-  </rss>`
+  <channel>
+    <title>${escapeHTML(cfg.pageTitle)}</title>
+    <link>https://${base}</link>
+    <description>${
+      !!limit
+        ? i18n(cfg.locale).pages.rss.lastFewNotes({ count: limit })
+        : i18n(cfg.locale).pages.rss.recentNotes
+    } on ${escapeHTML(cfg.pageTitle)}</description>
+    <generator>Quartz -- quartz.jzhao.xyz</generator>
+    ${items}
+  </channel>
+</rss>`
 }
 
 export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
   opts = { ...defaultOptions, ...opts }
+
   return {
     name: "ContentIndex",
-    async *emit(ctx, content) {
+
+    async getDependencyGraph(ctx, content, _resources) {
+      const graph = new DepGraph<FilePath>()
+
+      for (const [_tree, file] of content) {
+        const sourcePath = file.data.filePath!
+
+        graph.addEdge(
+          sourcePath,
+          joinSegments(ctx.argv.output, "static/contentIndex.json") as FilePath,
+        )
+
+        if (opts?.enableSiteMap) {
+          graph.addEdge(sourcePath, joinSegments(ctx.argv.output, "sitemap.xml") as FilePath)
+        }
+
+        if (opts?.enableRSS) {
+          graph.addEdge(sourcePath, joinSegments(ctx.argv.output, "index.xml") as FilePath)
+        }
+      }
+
+      return graph
+    },
+
+    async *emit(ctx, content, _resources) {
       const cfg = ctx.cfg.configuration
       const linkIndex: ContentIndexMap = new Map()
+
       for (const [tree, file] of content) {
         const slug = file.data.slug!
         const date = getDate(ctx.cfg.configuration, file.data) ?? new Date()
+
         if (opts?.includeEmptyFiles || (file.data.text && file.data.text !== "")) {
+          const rawNotBefore = file.data.frontmatter?.notBefore
+          const notBefore =
+            rawNotBefore !== undefined && rawNotBefore !== null && rawNotBefore !== ""
+              ? Number(rawNotBefore)
+              : undefined
+
           linkIndex.set(slug, {
             slug,
-            filePath: file.data.relativePath!,
+            filePath: file.data.filePath!,
             title: file.data.frontmatter?.title!,
             links: file.data.links ?? [],
             tags: file.data.frontmatter?.tags ?? [],
@@ -115,6 +155,9 @@ export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
               : undefined,
             date: date,
             description: file.data.description ?? "",
+
+            // custom: copied from frontmatter into static/contentIndex.json
+            notBefore: Number.isFinite(notBefore) ? notBefore : undefined,
           })
         }
       }
@@ -140,8 +183,8 @@ export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
       const fp = joinSegments("static", "contentIndex") as FullSlug
       const simplifiedIndex = Object.fromEntries(
         Array.from(linkIndex).map(([slug, content]) => {
-          // remove description and from content index as nothing downstream
-          // actually uses it. we only keep it in the index as we need it
+          // remove description and date from content index as nothing downstream
+          // actually uses them. we only keep them in the index as we need them
           // for the RSS feed
           delete content.description
           delete content.date
@@ -156,6 +199,7 @@ export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
         ext: ".json",
       })
     },
+
     externalResources: (ctx) => {
       if (opts?.enableRSS) {
         return {
