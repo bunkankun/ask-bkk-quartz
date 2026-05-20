@@ -51,8 +51,9 @@ export const defaultContentPageLayout: PageLayout = {
   },
 
   sortFn: (a, b) => {
-    if (a.isFolder && !b.isFolder) return -1
-    if (!a.isFolder && b.isFolder) return 1
+    // files before folders
+    if (!a.isFolder && b.isFolder) return -1
+    if (a.isFolder && !b.isFolder) return 1
 
     if (a.isFolder && b.isFolder) {
       return a.displayName.localeCompare(b.displayName, undefined, {
