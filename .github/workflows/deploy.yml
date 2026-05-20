@@ -3,10 +3,13 @@ name: Deploy Quartz site to GitHub Pages
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
   repository_dispatch:
     types: [content-updated]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: read
