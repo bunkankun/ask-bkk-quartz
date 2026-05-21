@@ -17,7 +17,7 @@ const config: QuartzConfig = {
     },
     locale: "en-US",
     baseUrl: "ask.bunkankun.org",
-    ignorePatterns: ["private", "templates", ".obsidian"],
+    ignorePatterns: ["private", "templates", ".obsidian", "Notes", "Titles"],
     defaultDateType: "modified",
     theme: {
       fontOrigin: "googleFonts",
