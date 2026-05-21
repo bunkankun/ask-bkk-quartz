@@ -11,7 +11,8 @@ export const sharedPageComponents: SharedLayout = {
       HXWD : "https://hxwd.org",
       Kanripo : "https://www.kanripo.org",
       GitHub: "https://github.com/bunkankun/ask-bkk",
-      "Issues": "https://github.com/bunkankun/ask-bkk/issues"
+//      "Issues": "https://github.com/bunkankun/ask-bkk/issues",
+      "This work is licensed as CC by SA" : "https://creativecommons.org/licenses/by-sa/4.0/",
     },
   }),
 }
