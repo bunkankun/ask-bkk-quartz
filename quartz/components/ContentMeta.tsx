@@ -28,6 +28,15 @@ export default ((opts?: Partial<ContentMetaOptions>) => {
 
     if (text) {
       const segments: (string | JSX.Element)[] = []
+      const path = fileData.filePath ?? fileData.slug ?? ""
+      const filename = String(path).split("/").pop() ?? ""
+      const isKR = filename.startsWith("KR")
+      const warn = "This file has been created by the AI agent Bunkankun"
+      if (isKR) {
+        segments.push(<span style="color:red;">{warn}</span>)
+      }
+
+      else {
 
       if (fileData.dates) {
         segments.push(<Date date={getDate(cfg, fileData)!} locale={cfg.locale} />)
@@ -41,7 +50,7 @@ export default ((opts?: Partial<ContentMetaOptions>) => {
         })
         segments.push(<span>{displayedTime}</span>)
       }
-
+      }
       return (
         <p show-comma={options.showComma} class={classNames(displayClass, "content-meta")}>
           {segments}
