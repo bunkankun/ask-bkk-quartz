@@ -31,7 +31,7 @@ export default ((opts?: Partial<ContentMetaOptions>) => {
       const path = fileData.filePath ?? fileData.slug ?? ""
       const filename = String(path).split("/").pop() ?? ""
       const isKR = filename.startsWith("KR")
-      const warn = "This file has been created by the AI agent Bunkankun"
+      const warn = "This file has been created by an AI agent"
       if (isKR) {
         segments.push(<span style="color:red;">{warn}</span>)
       }
